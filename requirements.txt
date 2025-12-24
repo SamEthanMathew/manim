@@ -7,8 +7,11 @@ python-dotenv>=1.0.0        # Environment variable management
 ipykernel>=6.0.0
 jupyter>=1.0.0
 
-# PDF Processing (for your friend's pipeline)
-pdfplumber>=0.9.0
+# PDF Text Extraction (TextExtractor component)
+pdfplumber>=0.11.0          # PDF text extraction
+Pillow>=10.0.0              # Image processing
+pdfminer.six>=20221105      # PDF parsing
+charset-normalizer>=3.3.0   # Text encoding detection
 
 # Future Dependencies
 # manim                      # Animation library (when you build Scene Animator)

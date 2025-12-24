@@ -16,16 +16,24 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from core.syllabus_generator import convert_json_to_syllabus
 from utils.config_loader import load_config
+from pipeline import pdf_to_syllabus
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Convert JSON to AI-enhanced teaching syllabus for Manim animations"
+        description="Convert PDF or JSON to AI-enhanced teaching syllabus for Manim animations"
     )
     
     parser.add_argument(
         "input",
-        help="Path to input JSON file"
+        help="Path to input file (PDF or JSON)"
+    )
+    
+    parser.add_argument(
+        "--type",
+        choices=["syllabus", "notes"],
+        default="syllabus",
+        help="Document type for PDF processing (default: syllabus)"
     )
     
     parser.add_argument(
@@ -58,21 +66,37 @@ def main():
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     
-    print(f"🎓 Manim-MCP Syllabus Generator")
-    print(f"   Input: {args.input}")
+    # Detect input type
+    input_path = Path(args.input)
+    is_pdf = input_path.suffix.lower() == '.pdf'
+    
+    print(f"🎓 Manim-MCP {'Complete Pipeline' if is_pdf else 'Syllabus Generator'}")
+    print(f"   Input: {args.input} ({'PDF' if is_pdf else 'JSON'})")
     print(f"   Output: {args.output}")
     print(f"   AI Enhancement: {'Disabled' if args.no_ai else 'Enabled'}")
+    if is_pdf:
+        print(f"   Document Type: {args.type}")
     print()
     
     try:
-        # Generate syllabus
-        syllabus = convert_json_to_syllabus(
-            args.input,
-            output_path=args.output,
-            use_professor=not args.no_ai,
-            config_path=args.config,
-            api_key=args.api_key
-        )
+        if is_pdf:
+            # PDF → JSON → Syllabus (complete pipeline)
+            syllabus = pdf_to_syllabus(
+                args.input,
+                output_path=args.output,
+                document_type=args.type,
+                use_ai=not args.no_ai,
+                api_key=args.api_key
+            )
+        else:
+            # JSON → Syllabus only
+            syllabus = convert_json_to_syllabus(
+                args.input,
+                output_path=args.output,
+                use_professor=not args.no_ai,
+                config_path=args.config,
+                api_key=args.api_key
+            )
         
         print()
         print("✅ Syllabus generated successfully!")
