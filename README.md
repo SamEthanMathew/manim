@@ -4,12 +4,14 @@ Transform PDFs, syllabi, and class notes into engaging educational videos with A
 
 ## 🎯 Overview
 
-Manim-MCP is an intelligent pipeline that converts educational documents into rich, animated videos:
+Manim-MCP is an intelligent end-to-end pipeline that converts educational documents into rich, animated videos:
 
 ```
-PDF → pdfplumber → AI Processing → JSON → [Syllabus Generator] → Teaching Guide → Scene Animator → Manim → Video + Audio
-                                              ↑ YOU ARE HERE
+PDF → [TextExtractor] → JSON → [AI Professor] → Teaching Syllabus → Scene Animator → Manim → Video + Audio
+      ↑ Integrated!              ↑ Complete!         ↑ YOU ARE HERE
 ```
+
+**✅ Now Complete**: PDF extraction + AI-enhanced syllabus generation!
 
 ### Key Features
 
@@ -39,12 +41,30 @@ cp config/env.example .env
 
 ### Basic Usage
 
+#### Process PDF Directly (Complete Pipeline!)
+
 ```bash
-# Generate AI-enhanced syllabus
+# PDF → AI-Enhanced Syllabus in one command!
+python main.py document.pdf -o output/syllabus.md
+
+# Process syllabus
+python main.py syllabus.pdf --type syllabus
+
+# Process lecture notes
+python main.py notes.pdf --type notes
+
+# Without AI (faster)
+python main.py document.pdf --no-ai
+```
+
+#### Process JSON (Original Workflow)
+
+```bash
+# JSON → AI-enhanced syllabus
 python main.py examples/example_input.json -o output/my_syllabus.md
 
-# Without AI (faster, basic)
-python main.py examples/example_input.json --no-ai -o output/basic.md
+# Without AI
+python main.py examples/example_input.json --no-ai
 ```
 
 ### Python API
