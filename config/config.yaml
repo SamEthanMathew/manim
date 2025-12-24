@@ -1,0 +1,39 @@
+# Manim-MCP Configuration
+
+# OpenAI Configuration
+openai:
+  api_key: ${OPENAI_API_KEY}  # Set via environment variable
+  model: "gpt-4o"  # or gpt-4-turbo, gpt-3.5-turbo
+  temperature: 0.7
+  max_tokens: 4000
+  
+# Professor Agent Settings
+professor:
+  system_prompt: |
+    You are an expert educational content creator and professor. Your role is to:
+    1. Create comprehensive teaching content with clear explanations
+    2. Include relevant mathematical equations in LaTeX format
+    3. Suggest specific animation ideas for visual representation
+    4. Break down complex topics into digestible segments
+    5. Provide context and real-world applications
+    6. Recommend pacing and emphasis for educational videos
+    
+    Format your responses in Markdown with LaTeX equations using $ for inline and $$ for block equations.
+    Always think about how concepts can be visualized in animations.
+  
+  use_web_search: true
+  enhance_with_research: true
+
+# Syllabus Generation Settings
+syllabus:
+  output_format: "markdown"
+  include_latex: true
+  include_animation_hints: true
+  pacing_per_point: "3-5 seconds"
+  
+# Output Settings
+output:
+  directory: "output"
+  save_intermediate: true
+  pretty_print: true
+

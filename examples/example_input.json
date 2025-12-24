@@ -1,0 +1,64 @@
+{
+    "document_type": "syllabus",
+    "index": [
+        "Course Information",
+        "Topics Covered",
+        "Grading Policy",
+        "Main Dates"
+    ],
+    "sections": [
+        {
+            "id": 0,
+            "title": "Course Information",
+            "content": {
+                "course_name": "Introduction to Python Programming",
+                "instructor": "Dr. Smith",
+                "credits": 3,
+                "description": "Learn fundamental programming concepts using Python",
+                "prerequisites": "None"
+            }
+        },
+        {
+            "id": 1,
+            "title": "Topics Covered",
+            "content": {
+                "week_1": [
+                    "Variables and Data Types",
+                    "Control Flow (if/else, loops)",
+                    "Functions and Parameters"
+                ],
+                "week_2": [
+                    "Lists and Dictionaries",
+                    "File I/O Operations",
+                    "Error Handling and Exceptions"
+                ],
+                "week_3": [
+                    "Object-Oriented Programming",
+                    "Modules and Packages",
+                    "Final Project Overview"
+                ]
+            }
+        },
+        {
+            "id": 2,
+            "title": "Grading Policy",
+            "content": {
+                "assignments": "40%",
+                "midterm": "25%",
+                "final_project": "35%",
+                "attendance": "Bonus up to 5%"
+            }
+        },
+        {
+            "id": 3,
+            "title": "Main Dates",
+            "content": {
+                "start_date": "January 15, 2024",
+                "midterm": "March 1, 2024",
+                "final_project_due": "May 10, 2024",
+                "no_class": "March 15-22 (Spring Break)"
+            }
+        }
+    ]
+}
+

@@ -1,1 +1,16 @@
-pdfplumber
+# Core Dependencies
+openai>=1.0.0                # OpenAI API for Professor Agent
+pyyaml>=6.0.0               # Configuration file parsing
+python-dotenv>=1.0.0        # Environment variable management
+
+# Jupyter Notebooks
+ipykernel>=6.0.0
+jupyter>=1.0.0
+
+# PDF Processing (for your friend's pipeline)
+pdfplumber>=0.9.0
+
+# Future Dependencies
+# manim                      # Animation library (when you build Scene Animator)
+# pydub                      # Audio processing (for narration)
+# requests                   # For web search capabilities

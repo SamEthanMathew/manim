@@ -1,2 +1,35 @@
+# Python
 .venv
 .env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Configuration
+config/.env
+.env.local
+
+# Generated outputs
+output/
+*_output.md
+demo_output.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
