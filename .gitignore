@@ -184,3 +184,6 @@ yarn-error.log*
 *.bak
 *.orig
 
+
+.venv
+.env
