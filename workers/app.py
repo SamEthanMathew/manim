@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 
 import modal
+from fastapi import Header  # used in the trigger endpoint signature
 
 # ─── Images ───────────────────────────────────────────────────────────────────
 #
@@ -76,10 +77,6 @@ render_image = (
 
 # Default image used by all @app.function decorations below.
 image = base_image
-
-# Imports that only need to resolve inside the container (not on local CLI).
-with image.imports():
-    from fastapi import Header
 
 # ─── App ──────────────────────────────────────────────────────────────────────
 
@@ -273,6 +270,42 @@ class Main(Scene):
 
     return {
         "ok": result.ok,
+        "exit_code": result.exit_code,
+        "duration_sec": result.duration_sec,
+        "error_class": result.error_class,
+        "mp4_size": len(result.mp4_bytes) if result.mp4_bytes else 0,
+        "stderr_tail": result.stderr[-2000:] if result.stderr else "",
+    }
+
+
+@app.function(image=base_image, timeout=900, memory=2048, cpu=2)
+def render_fixture(fixture_name: str) -> dict:
+    """Render a specific fixture from tests/render_fixtures/fixtures.py.
+
+    Use to validate that the reference Manim code for a fixture renders
+    cleanly through the sandbox path.
+    """
+    import sys
+    sys.path.insert(0, "/root")
+    from tests.render_fixtures.fixtures import ALL_FIXTURES
+    from workers.lib.config import WorkerConfig
+    from workers.lib.sandbox import run_manim_scene
+
+    fixture = next((f for f in ALL_FIXTURES if f.name == fixture_name), None)
+    if not fixture:
+        return {
+            "ok": False,
+            "error": f"unknown fixture: {fixture_name}",
+            "available": [f.name for f in ALL_FIXTURES],
+        }
+
+    cfg = WorkerConfig.from_env()
+    result = run_manim_scene(cfg, fixture.reference_code, sandbox_image=render_image)
+
+    return {
+        "ok": result.ok,
+        "fixture": fixture.name,
+        "description": fixture.description,
         "exit_code": result.exit_code,
         "duration_sec": result.duration_sec,
         "error_class": result.error_class,

@@ -58,10 +58,10 @@ class Main(Scene):
     assert any("__import__" in v or "system" in v for v in r.violations)
 
 
-def test_subclasses_traversal_does_not_crash_checker():
-    # The classic "object.__subclasses__()" escape. Our checker doesn't
-    # specifically flag this attribute traversal, but it must not crash and
-    # it must not return ok if `open`/`system`/`eval` appear anywhere.
+def test_subclasses_traversal_blocked():
+    # The classic "object.__subclasses__()" escape. As of 2026-05-13 the AST
+    # checker bans the introspection dunders that enable this traversal
+    # (__subclasses__, __bases__, __base__, __mro__).
     code = """
 from manim import Scene
 
@@ -70,9 +70,19 @@ class Main(Scene):
         x = [].__class__.__base__.__subclasses__()
 """
     r = check(code)
-    # No banned attribute referenced -> may pass. We assert behavior, not policy:
-    # the only requirement is the checker returns a SafetyReport without error.
-    assert isinstance(r.ok, bool)
+    assert not r.ok
+    # Either __subclasses__ or __base__ should trip it.
+    assert any(b in v for v in r.violations for b in ("__subclasses__", "__base__", "__bases__"))
+
+
+def test_func_globals_introspection_blocked():
+    code = """
+def f(): pass
+print(f.__globals__)
+"""
+    r = check(code)
+    assert not r.ok
+    assert any("__globals__" in v for v in r.violations)
 
 
 def test_pickle_import_fails():

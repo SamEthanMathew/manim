@@ -145,3 +145,85 @@ Every incident with user impact gets a postmortem at `docs/postmortems/YYYY-MM-D
 5. What went well
 6. What went poorly
 7. Action items (with owners + dates)
+
+---
+
+## Operational gotchas (Phase 3-4 build, learned 2026-05-13)
+
+### Modal deploy on Windows: console encoding
+
+**Symptom**: `modal deploy workers/app.py` fails with `'charmap' codec can't encode character '→'`.
+
+**Cause**: Modal's CLI streams Unicode arrows in build progress; Windows default code page (cp1252) can't encode them.
+
+**Fix**: Always prefix with `PYTHONIOENCODING=utf-8 PYTHONUTF8=1`. The `scripts/dev-setup.sh` should set these. CI sets them in `.github/workflows/deploy.yml`.
+
+### Modal deploy timeout on heavy images
+
+**Symptom**: Build aborts mid-apt-install with "Image build for im-... terminated due to external shut-down."
+
+**Cause**: Modal's free-tier image builder has resource limits; texlive-full + manim + nougat-ocr in one image overruns them. We split into `base_image` (slim, ~200MB) and `render_image` (heavy, ~1.5GB) — see `workers/app.py` ADR-006.
+
+**Fix**: Never add `texlive-full`. Use the curated `texlive` + `texlive-latex-extra` + `texlive-fonts-recommended` + `texlive-science` set. Nougat is deferred until we can afford a separate image variant.
+
+### Modal CLI requires repo-root cwd
+
+**Symptom**: `modal deploy workers/app.py` fails with `FileNotFoundError: 'C:\\Users\\samet\\Manim-MCP\\apps\\web\\workers/app.py'`.
+
+**Cause**: Modal resolves the script path relative to the current working directory. Earlier `cd apps/web` from a build step left the shell in the wrong place.
+
+**Fix**: Always run modal commands from the repo root. The `cwd` should be `C:\Users\samet\Manim-MCP`. If unsure, run `pwd` first.
+
+### `modal run --quiet` swallows function return value
+
+**Symptom**: Running `modal run --quiet workers/app.py::render_smoke_test` returns 0 exit code but no output, even though the function returned a dict.
+
+**Cause**: `--quiet` suppresses everything including function return prints.
+
+**Fix**: For smoke tests, use plain `modal run` (no `--quiet`). For production deploys where you don't want the chatty build output, `--quiet` is fine.
+
+### Next.js build: env vars not available at build time
+
+**Symptom**: `pnpm build` for `apps/web` fails with `@supabase/ssr: Your project's URL and API key are required to create a Supabase client!`
+
+**Cause**: Next.js prerender pass instantiates the Supabase client at module load. If `process.env.NEXT_PUBLIC_SUPABASE_URL` is empty (typical for local builds without `apps/web/.env.local`), the client throws.
+
+**Fix**: `lib/supabase/{browser,server}.ts` fall back to placeholder values when env vars are missing. The placeholders are never reached at runtime because Vercel populates the env vars correctly there.
+
+### Anonymous sign-ins must be enabled in Supabase
+
+**Symptom**: Homepage shows "This site can't create a session for you."
+
+**Cause**: `signInAnonymously()` returns an error if the toggle is off in Supabase Auth → Providers.
+
+**Fix**: Dashboard only — there's no SQL/MCP path. Enable at `/dashboard/project/<ref>/auth/providers`, scroll to **Anonymous Sign-ins**, toggle ON.
+
+### Render image builds lazily on first sandbox spawn
+
+**Symptom**: First real PDF render takes 5-10 minutes longer than expected; the user sees "rendering scene 1/N" for ages.
+
+**Cause**: `render_image` (heavy LaTeX) is not attached to a deploy-time function. It builds on first `modal.Sandbox.create()` call.
+
+**Fix (already applied)**: `render_smoke_test` and `render_smoke_sandbox` are decorated with `image=render_image`, which forces a build at deploy time. Make sure these stay in `workers/app.py`.
+
+### Modal Sandbox: `--quiet` doesn't surface function `return` value either
+
+Confirmed in testing 2026-05-13 — same as the `modal run --quiet` issue. Sandbox stdout is what surfaces.
+
+---
+
+## Tonight's verified findings (Weeks 3-4, 2026-05-13)
+
+| What | Status |
+|---|---|
+| Base image deploys cleanly (~30s) | ✅ |
+| Render image (texlive+manim) deploys (~5min) | ✅ |
+| Modal trigger endpoint auth | ✅ |
+| Supabase anonymous auth + RLS | ✅ |
+| Frontend build green on Vercel | ✅ |
+| 94 tests passing (`tests/`, `workers/tests/`) | ✅ |
+| Sentry + structlog wired into entry points | ✅ |
+| Prompts v2 with worked examples + 3b1b excerpts | ✅ |
+| Render smoke test (LaTeX + Manim render in container) | see status |
+| End-to-end with real PDF | pending — limited by $5 budget |
+

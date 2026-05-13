@@ -33,6 +33,12 @@ BANNED_ATTRS: frozenset[str] = frozenset({
     "urlopen", "request",                # network
     "socket",
     "send", "recv",
+    # Dunder introspection escapes:
+    # `().__class__.__bases__[0].__subclasses__()` walks the MRO to find
+    # arbitrary classes (e.g., subprocess.Popen) even with imports locked down.
+    "__subclasses__", "__bases__", "__base__", "__mro__",
+    # Function introspection escapes:
+    "__globals__", "__closure__", "__code__", "__builtins__",
 })
 
 # Banned module names that may sneak in via `from x import y`.
