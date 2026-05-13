@@ -48,7 +48,7 @@ def main() -> int:
     p.add_argument("--user-label", default="e2e-test")
     args = p.parse_args()
 
-    supabase_url = os.environ["SUPABASE_URL"]
+    supabase_url = os.environ.get("SUPABASE_URL") or os.environ["NEXT_PUBLIC_SUPABASE_URL"]
     service_key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
     db_password = os.environ["SUPABASE_DB_PASSWORD"]
     byok_key = os.environ["BYOK_ENCRYPTION_KEY"]

@@ -93,11 +93,25 @@ def upload_video(
 
 
 def download_artifact(client: Client, path: str) -> bytes:
-    return client.storage.from_("artifacts").download(path)
+    return _download_retry(client.storage.from_("artifacts"), path)
 
 
 def download_pdf(client: Client, path: str) -> bytes:
-    return client.storage.from_("pdfs").download(path)
+    return _download_retry(client.storage.from_("pdfs"), path)
+
+
+def _download_retry(bucket, path: str, max_attempts: int = 3) -> bytes:
+    """Retry storage downloads with exponential backoff on transient errors."""
+    import time
+    last: Exception | None = None
+    for i in range(max_attempts):
+        try:
+            return bucket.download(path)
+        except Exception as e:
+            last = e
+            if i + 1 < max_attempts:
+                time.sleep(2 ** i)
+    raise last if last else RuntimeError("download failed without an error")
 
 
 # ─── Scene state ───────────────────────────────────────────────────────────────

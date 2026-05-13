@@ -228,7 +228,12 @@ class Pipeline:
           - Render in sandbox
         Fan-out via Modal `.map()`.
         """
-        from workers.app import render_one_scene  # local import to avoid cycle
+        import modal
+        # Look up the deployed function by name; explicit .hydrate.aio() so
+        # the handle is materialized before .map().
+        render_one_scene = modal.Function.from_name("manim", "render_one_scene")
+        await render_one_scene.hydrate.aio()
+
         await update_job_status(ctx.supabase, ctx.job_id, JobStatus.RENDERING)
         await emit_event(ctx.supabase, ctx.job_id, "render", JobEventKind.STARTED,
                          {"scenes": len(script.scenes)})
@@ -246,8 +251,10 @@ class Pipeline:
             for i, s in enumerate(script.scenes)
         ]
 
-        # In v1, run in parallel with bounded concurrency.
-        results = list(render_one_scene.map(payloads))
+        # Run in parallel with Modal's bounded fan-out.
+        results = []
+        async for r in render_one_scene.map.aio(payloads):
+            results.append(r)
         rendered = [RenderedScene.model_validate(r) for r in results]
 
         await emit_event(ctx.supabase, ctx.job_id, "render", JobEventKind.COMPLETED, {
@@ -277,3 +284,5 @@ class Pipeline:
         await emit_event(ctx.supabase, ctx.job_id, "compose", JobEventKind.COMPLETED,
                          {"path": final.mp4_storage_path})
         return final
+
+# touched-pipeline 1778647438.2102811

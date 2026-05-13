@@ -32,6 +32,7 @@ base_image = (
     .apt_install(
         "qpdf",                  # PDF sanitization (small, fast)
         "git",                   # corpus indexer clones 3b1b
+        "ffmpeg",                # Stage 7 compose mux/concat
     )
     .pip_install(
         "pydantic>=2.7.0",
@@ -69,11 +70,24 @@ render_image = (
         "fonts-noto",
     )
     .pip_install(
+        # All base pipeline deps — render_one_scene runs the per-scene
+        # mini-pipeline (LLM stages + render) and needs everything.
+        "pydantic>=2.7.0",
+        "supabase>=2.7.0",
+        "openai>=1.40.0",
+        "anthropic>=0.34.0",
+        "voyageai>=0.2.0",
+        "tenacity>=8.2.0",
+        "structlog>=24.1.0",
+        "cryptography>=42.0.0",
+        "pdfplumber>=0.11.0",
+        "sentry-sdk>=2.0.0",
+        # Needed at app.py module load (Header is used in trigger signature default)
+        "fastapi[standard]>=0.115.0",
+        # Render-specific
         "manim>=0.18.0",
         "numpy>=1.26.0",
         "Pillow>=10.0.0",
-        # Needed at app.py module load (Header is used in trigger signature default)
-        "fastapi[standard]>=0.115.0",
     )
     .add_local_dir("workers", remote_path="/root/workers")
     .add_local_dir("src", remote_path="/root/src")

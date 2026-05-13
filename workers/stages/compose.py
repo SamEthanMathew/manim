@@ -127,7 +127,21 @@ def _concat_videos(parts: list[Path], out: Path) -> None:
 
 
 def _download_mp4(client, path: str) -> bytes:
-    return client.storage.from_("videos").download(path)
+    return _download_with_retry(client.storage.from_("videos"), path)
+
+
+def _download_with_retry(bucket, path: str, max_attempts: int = 3) -> bytes:
+    """Retry storage downloads with exponential backoff on transient timeouts."""
+    import time
+    last_err: Exception | None = None
+    for i in range(max_attempts):
+        try:
+            return bucket.download(path)
+        except Exception as e:
+            last_err = e
+            if i + 1 < max_attempts:
+                time.sleep(2 ** i)
+    raise last_err if last_err else RuntimeError("download failed without an error")
 
 
 # ─── SRT generation ───────────────────────────────────────────────────────────

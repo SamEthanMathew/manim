@@ -25,7 +25,23 @@ def encrypt(server_key: str, plaintext: str) -> bytes:
     return _make_fernet(server_key).encrypt(plaintext.encode("utf-8"))
 
 
-def decrypt(server_key: str, ciphertext: bytes) -> str:
+def decrypt(server_key: str, ciphertext: bytes | str) -> str:
+    """Decrypt a Fernet token.
+
+    Accepts either raw bytes (direct psycopg path) or a Postgres hex bytea
+    representation as a string (`\\x` prefix, what supabase-py returns from
+    PostgREST). Auto-detects format.
+    """
+    if isinstance(ciphertext, str):
+        if ciphertext.startswith("\\x"):
+            # Postgres bytea hex format: '\xabcd...' -> bytes
+            ciphertext = bytes.fromhex(ciphertext[2:])
+        else:
+            # Defensive: maybe it's already the Fernet token base64
+            ciphertext = ciphertext.encode("utf-8")
+    elif isinstance(ciphertext, memoryview):
+        ciphertext = bytes(ciphertext)
+
     try:
         return _make_fernet(server_key).decrypt(ciphertext).decode("utf-8")
     except InvalidToken as e:
