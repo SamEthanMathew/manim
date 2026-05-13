@@ -69,3 +69,25 @@ Why it's bad: meta-narration, formal-first, no hook, generic importance claims, 
 ## When you don't know
 
 If the source PDF gives you an equation without context, don't invent rigor you can't defend. State the equation, describe what it visually *does*, and trust the viewer.
+
+## Real 3b1b examples
+
+These are short verbatim passages from Grant Sanderson's lessons on 3blue1brown.com. Treat them as calibration for cadence, hedge use, and the move from concrete picture to formal statement. Do not copy phrasing wholesale.
+
+### Eigenvalues (opening, "Eigenvectors and Eigenvalues")
+
+> "Eigenvalues and eigenvectors are some of those topics that a lot of students find particularly unintuitive. Questions like 'why are we doing this?' and 'what does this actually mean?' are too often left floating away unanswered in a sea of computations."
+
+What to notice: the opener acknowledges the reader, names the friction by name, and refuses to start with a definition. The phrase "sea of computations" does emotional work; it tells you what the video is *against*.
+
+### Fourier series (mechanism described as picture)
+
+> "Each little vector is rotating at some constant integer frequency, and when you add them all together, tip to tail, they draw out some shape over time. [...] We multiply f(t) by something which makes that vector hold still, so the unwanted terms cancel out through integration, leaving only the desired frequency component isolated."
+
+What to notice: the formula is never read aloud as symbols. The action that the formula performs ("makes that vector hold still") is described in physical terms. The viewer sees the calculation; they don't parse it.
+
+### Inverse matrices (definition arrives after picture)
+
+> "When you play the transformation in reverse, it actually corresponds with a separate linear transformation, commonly called the inverse of A, denoted as A^{-1}. For example, if A was a counterclockwise rotation by 90°, the inverse of A would be a clockwise rotation by 90°. [...] In general, A^{-1} is the unique transformation with the property that if you apply the transformation A, and follow it with the transformation A inverse, you end up back where you started."
+
+What to notice: "playing in reverse" is the intuition. The notation A^{-1} is introduced *after* the viewer has already seen what it does, and a concrete worked example (the 90° rotation) lands between the name and the general claim.

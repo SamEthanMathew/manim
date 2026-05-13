@@ -21,6 +21,12 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
   const supabase = createSupabaseBrowserClient();
   const [job, setJob] = useState<Job | null>(null);
   const [events, setEvents] = useState<JobEvent[]>([]);
+  const [showWaiting, setShowWaiting] = useState(false);
+
+  // Set the page title based on the job id.
+  useEffect(() => {
+    document.title = `Job ${id.slice(0, 8)} — manim`;
+  }, [id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,24 +66,35 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
     };
   }, [id, supabase]);
 
+  // After a short delay with no events, surface a "waiting for events" message
+  // so the empty event log doesn't feel broken.
+  useEffect(() => {
+    if (events.length > 0) {
+      setShowWaiting(false);
+      return;
+    }
+    const t = setTimeout(() => setShowWaiting(true), 3000);
+    return () => clearTimeout(t);
+  }, [events.length]);
+
   if (!job) {
-    return <main className="min-h-screen p-12">Loading…</main>;
+    return <JobDetailSkeleton />;
   }
 
   return (
-    <main className="min-h-screen px-6 py-12 max-w-4xl mx-auto">
-      <header className="mb-8">
-        <div className="text-xs font-mono text-gray-500 mb-1">{job.id}</div>
-        <h1 className="text-2xl font-semibold">
+    <main className="min-h-screen px-4 sm:px-6 py-8 sm:py-12 max-w-4xl mx-auto">
+      <header className="mb-6 sm:mb-8">
+        <div className="text-xs font-mono text-gray-400 mb-1 break-all">{job.id}</div>
+        <h1 className="text-xl sm:text-2xl font-semibold break-words">
           {job.pdf_storage_path.split("/").pop()}
         </h1>
-        <p className="text-sm text-gray-400 mt-1">
+        <p className="text-sm text-gray-300 mt-1">
           Status: <span className="text-white">{job.status}</span>
         </p>
       </header>
 
-      <section className="mb-12">
-        <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-3">Pipeline</h2>
+      <section className="mb-10 sm:mb-12">
+        <h2 className="text-sm uppercase tracking-wide text-gray-300 mb-3">Pipeline</h2>
         <ol className="space-y-1">
           {STAGES.map((stage) => {
             const stageEvents = events.filter((e) => e.stage === stage);
@@ -95,9 +112,9 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
             return (
               <li
                 key={stage}
-                className="flex items-center justify-between p-3 border border-gray-800 rounded"
+                className="flex flex-wrap gap-2 items-center justify-between p-3 border border-gray-800 rounded"
               >
-                <span className="capitalize">{stage}</span>
+                <span className="capitalize text-sm sm:text-base">{stage}</span>
                 <StagePill state={state} />
               </li>
             );
@@ -107,7 +124,7 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
       {job.final_video_path && (
         <section>
-          <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-3">Result</h2>
+          <h2 className="text-sm uppercase tracking-wide text-gray-300 mb-3">Result</h2>
           <video
             controls
             className="w-full rounded border border-gray-800"
@@ -116,19 +133,30 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
         </section>
       )}
 
-      <section className="mt-12">
-        <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-3">
+      <section className="mt-10 sm:mt-12">
+        <h2 className="text-sm uppercase tracking-wide text-gray-300 mb-3">
           Event log ({events.length})
         </h2>
-        <ul className="font-mono text-xs space-y-1 max-h-64 overflow-auto">
-          {events.map((e) => (
-            <li key={e.id} className="text-gray-400">
-              <span className="text-gray-600">{new Date(e.created_at).toLocaleTimeString()}</span>{" "}
-              <span className="text-accent-blue">{e.stage}</span>.<span>{e.kind}</span>{" "}
-              <span className="text-gray-500">{JSON.stringify(e.payload)}</span>
-            </li>
-          ))}
-        </ul>
+        {events.length === 0 ? (
+          <p
+            aria-live="polite"
+            className="text-sm text-gray-400 border border-dashed border-gray-800 rounded p-4"
+          >
+            {showWaiting ? "Waiting for events…" : "Connecting…"}
+          </p>
+        ) : (
+          <ul className="font-mono text-xs space-y-1 max-h-64 overflow-auto overflow-x-auto">
+            {events.map((e) => (
+              <li key={e.id} className="text-gray-300 break-all">
+                <span className="text-gray-500">
+                  {new Date(e.created_at).toLocaleTimeString()}
+                </span>{" "}
+                <span className="text-accent-blue">{e.stage}</span>.<span>{e.kind}</span>{" "}
+                <span className="text-gray-400">{JSON.stringify(e.payload)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </main>
   );
@@ -136,10 +164,33 @@ export default function JobDetailPage({ params }: { params: Promise<{ id: string
 
 function StagePill({ state }: { state: "pending" | "in-progress" | "completed" | "error" }) {
   const styles = {
-    pending: "bg-gray-800 text-gray-500",
+    pending: "bg-gray-800 text-gray-300",
     "in-progress": "bg-accent-blue text-white animate-pulse",
     completed: "bg-accent-green text-black",
     error: "bg-accent-red text-white",
   };
-  return <span className={`text-xs px-2 py-0.5 rounded ${styles[state]}`}>{state}</span>;
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded ${styles[state]}`}>{state}</span>
+  );
+}
+
+function JobDetailSkeleton() {
+  return (
+    <main
+      aria-busy="true"
+      aria-label="Loading job"
+      className="min-h-screen px-4 sm:px-6 py-8 sm:py-12 max-w-4xl mx-auto animate-pulse"
+    >
+      <div className="mb-6 sm:mb-8 space-y-2">
+        <div className="h-3 w-40 bg-gray-800 rounded" />
+        <div className="h-7 w-2/3 bg-gray-800 rounded" />
+        <div className="h-4 w-32 bg-gray-800 rounded" />
+      </div>
+      <div className="space-y-1">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-12 bg-gray-900 border border-gray-800 rounded" />
+        ))}
+      </div>
+    </main>
+  );
 }

@@ -16,11 +16,11 @@ from supabase import create_client
 
 PROMPTS = [
     ("style_guide",      "workers/prompts/style_guide.md",        1),
-    ("curriculum",       "workers/prompts/curriculum_v1.md",      1),
-    ("script",           "workers/prompts/script_v1.md",          1),
-    ("scene_spec",       "workers/prompts/scene_spec_v1.md",      1),
-    ("codegen",          "workers/prompts/codegen_v1.md",         1),
-    ("codegen_repair",   "workers/prompts/codegen_repair_v1.md",  1),
+    ("curriculum",       "workers/prompts/curriculum_v2.md",      2),
+    ("script",           "workers/prompts/script_v2.md",          2),
+    ("scene_spec",       "workers/prompts/scene_spec_v2.md",      2),
+    ("codegen",          "workers/prompts/codegen_v2.md",         2),
+    ("codegen_repair",   "workers/prompts/codegen_repair_v2.md",  2),
 ]
 
 

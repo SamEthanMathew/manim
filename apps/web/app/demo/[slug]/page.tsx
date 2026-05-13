@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 
@@ -25,6 +26,20 @@ const DEMOS: Record<string, { title: string; subject: string; description: strin
   },
 };
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const demo = DEMOS[slug];
+  if (!demo) return { title: "Demo — manim" };
+  return {
+    title: `${demo.title} — manim demo`,
+    description: demo.description,
+  };
+}
+
 export default async function DemoPage({
   params,
 }: {
@@ -35,35 +50,43 @@ export default async function DemoPage({
   if (!demo) notFound();
 
   return (
-    <main className="min-h-screen px-6 py-12 max-w-3xl mx-auto">
-      <Link href="/" className="text-sm text-gray-400 hover:text-white">
+    <main className="min-h-screen px-4 sm:px-6 py-8 sm:py-12 max-w-3xl mx-auto">
+      <Link
+        href="/"
+        className="text-sm text-gray-300 hover:text-white rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--bg)] px-1"
+      >
         ← back
       </Link>
 
-      <header className="mt-8 mb-6">
+      <header className="mt-6 sm:mt-8 mb-5 sm:mb-6">
         <div className="text-xs uppercase tracking-wide text-accent-blue mb-2">
           {demo.subject}
         </div>
-        <h1 className="text-3xl font-bold">{demo.title}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold break-words">{demo.title}</h1>
       </header>
 
-      <p className="text-gray-300 mb-8 leading-relaxed">{demo.description}</p>
+      <p className="text-gray-200 mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base">
+        {demo.description}
+      </p>
 
       <video
         controls
         poster={`/demos/${slug}.jpg`}
-        className="w-full rounded border border-gray-800 mb-8"
+        className="w-full rounded border border-gray-800 mb-6 sm:mb-8"
         src={demo.video}
       />
 
-      <div className="text-sm text-gray-500 mt-8 space-y-2">
+      <div className="text-sm text-gray-300 mt-6 sm:mt-8 space-y-2">
         <p>
           This video was generated end-to-end from a public-domain PDF — no manual edits, no
           hand-written code. The pipeline planned the curriculum, wrote the script, generated
           Manim code per scene, and stitched the result.
         </p>
         <p>
-          <Link href="/sign-in" className="text-accent-blue hover:underline">
+          <Link
+            href="/sign-in"
+            className="text-accent-blue hover:underline rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue"
+          >
             Sign in
           </Link>{" "}
           to upload your own PDF.
