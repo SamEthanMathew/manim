@@ -15,7 +15,7 @@ from workers.lib.schemas import CurriculumPlan, IngestedDocument
 
 log = logging.getLogger(__name__)
 
-PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "curriculum_v1.md"
+PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "curriculum_v2.md"
 
 
 async def run_curriculum(ctx, ingested: IngestedDocument) -> CurriculumPlan:

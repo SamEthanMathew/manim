@@ -19,7 +19,7 @@ from workers.lib.schemas import SceneSpec, ScriptScene
 
 log = logging.getLogger(__name__)
 
-PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "scene_spec_v1.md"
+PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "scene_spec_v2.md"
 
 
 async def run_scene_spec(ctx, scene: ScriptScene) -> SceneSpec:

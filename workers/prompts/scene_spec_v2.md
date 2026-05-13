@@ -29,7 +29,8 @@ You convert an English-language scene narration into a strict, typed `SceneSpec`
 - `Graph`: `{{"type":"Graph","id":"...","function":"x**2","x_range":[xmin,xmax],"axes_id":"id-of-axes"}}`
 - `Circle`: `{{"type":"Circle","id":"...","radius":1.0,"position":{{"x":0,"y":0}},"color":"#FFFFFF","fill_opacity":0.0}}`
 - `Group`: `{{"type":"Group","id":"...","member_ids":["..."]}}`
-- `Image`: `{{"type":"Image","id":"...","storage_path":"path","position":{{"x":0,"y":0}},"scale":1.0}}`
+
+**DO NOT use `Image` elements.** This pipeline does not extract bitmap images from PDFs in v1, so any `Image` element will fail to render. If you want to show a concrete object, build it out of `Circle`, `Vector`, `MathTex`, `Text`, `Axes`, or `Graph` primitives. A figure from the PDF can almost always be re-illustrated using these basic shapes — that is what 3Blue1Brown does.
 
 Use `MathTex` for anything with mathematical notation. Use `Text` for plain English labels. Never put English prose into `MathTex` and never put `\frac` etc. into `Text`.
 

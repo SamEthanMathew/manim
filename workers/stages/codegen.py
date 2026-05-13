@@ -20,8 +20,8 @@ from workers.lib.schemas import GeneratedScene, SceneSpec
 
 log = logging.getLogger(__name__)
 
-PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "codegen_v1.md"
-REPAIR_PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "codegen_repair_v1.md"
+PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "codegen_v2.md"
+REPAIR_PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "codegen_repair_v2.md"
 
 
 def spec_hash(spec: SceneSpec) -> str:

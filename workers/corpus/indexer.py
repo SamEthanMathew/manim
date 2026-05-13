@@ -87,51 +87,82 @@ def emit_raw(repo_root: Path, out_path: Path) -> int:
 
 
 def enrich(input_path: Path, output_path: Path,
-           voyage_api_key: str, openai_api_key: str) -> int:
-    """Reads corpus_raw.jsonl, adds description (LLM) and embedding (Voyage)."""
+           voyage_api_key: str, openai_api_key: str,
+           voyage_batch: int = 10,
+           voyage_request_interval_sec: float = 21.0) -> int:
+    """Reads corpus_raw.jsonl, adds description (LLM) and embedding (Voyage).
+
+    Batches Voyage embed calls to respect free-tier rate limits
+    (3 RPM + 10k TPM). Defaults: 10 docs per call, ≥21s between calls
+    (so we stay strictly under 3 RPM).
+    """
+    import time
     import openai
     import voyageai
 
     voyage = voyageai.Client(api_key=voyage_api_key)
     oai = openai.OpenAI(api_key=openai_api_key)
 
-    out_count = 0
-    with input_path.open("r", encoding="utf-8") as fin, \
-         output_path.open("w", encoding="utf-8") as fout:
-        for line in fin:
-            rec = json.loads(line)
+    # ---- pass 1: descriptions (OpenAI, parallel via ThreadPoolExecutor) ----
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    records = [json.loads(l) for l in input_path.open("r", encoding="utf-8")]
 
-            # Description (one paragraph, cheap call)
-            desc_prompt = (
-                "In one short paragraph, describe what this Manim scene visualizes "
-                "and the math/CS concept it teaches:\n\n```python\n"
-                f"{rec['code'][:3500]}\n```"
+    def _describe_one(rec):
+        desc_prompt = (
+            "In one short paragraph, describe what this Manim scene visualizes "
+            "and the math/CS concept it teaches:\n\n```python\n"
+            f"{rec['code'][:3500]}\n```"
+        )
+        try:
+            resp = oai.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": desc_prompt}],
+                max_tokens=200,
+                temperature=0.3,
             )
-            try:
-                desc_resp = oai.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role": "user", "content": desc_prompt}],
-                    max_tokens=200,
-                    temperature=0.3,
-                )
-                rec["description"] = desc_resp.choices[0].message.content or ""
-            except Exception as e:
-                log.warning("Description failed for %s: %s", rec["source"], e)
-                rec["description"] = rec.get("docstring", "")
+            rec["description"] = resp.choices[0].message.content or ""
+        except Exception as e:
+            log.warning("Description failed for %s: %s", rec["source"], e)
+            rec["description"] = rec.get("docstring", "")
+        return rec
 
-            # Embedding text = description + code preview
-            embed_text = f"{rec['description']}\n\n{rec['code'][:2000]}"
-            try:
-                emb = voyage.embed([embed_text], model="voyage-3", input_type="document")
-                rec["embedding"] = emb.embeddings[0]
-            except Exception as e:
-                log.warning("Embedding failed for %s: %s", rec["source"], e)
-                rec["embedding"] = None
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        done = 0
+        futures = [pool.submit(_describe_one, r) for r in records]
+        for fut in as_completed(futures):
+            fut.result()
+            done += 1
+            if done % 25 == 0 or done == len(records):
+                print(f"  descriptions: {done}/{len(records)}")
 
+    # ---- pass 2: batched embeddings (Voyage, rate-limited) ----
+    last_call = 0.0
+    for i in range(0, len(records), voyage_batch):
+        batch = records[i : i + voyage_batch]
+        texts = [f"{r['description']}\n\n{r['code'][:2000]}" for r in batch]
+
+        # Throttle to fit 3 RPM (one call ≥21s after the previous one).
+        wait = voyage_request_interval_sec - (time.time() - last_call)
+        if wait > 0:
+            time.sleep(wait)
+
+        try:
+            emb = voyage.embed(texts, model="voyage-3", input_type="document")
+            for r, v in zip(batch, emb.embeddings, strict=True):
+                r["embedding"] = v
+            print(f"  batch {i // voyage_batch + 1}: embedded {len(batch)} scenes")
+        except Exception as e:
+            log.warning("Embedding batch failed for %d scenes: %s", len(batch), e)
+            for r in batch:
+                r["embedding"] = None
+        last_call = time.time()
+
+    # ---- write out ----
+    with output_path.open("w", encoding="utf-8") as fout:
+        for rec in records:
             fout.write(json.dumps(rec, ensure_ascii=False) + "\n")
-            out_count += 1
 
-    return out_count
+    return len(records)
 
 
 # ─── Step 4: upsert into Supabase ─────────────────────────────────────────────

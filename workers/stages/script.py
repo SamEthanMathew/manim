@@ -15,7 +15,7 @@ from workers.lib.schemas import CurriculumPlan, IngestedDocument, Script, Script
 log = logging.getLogger(__name__)
 
 STYLE_PATH = Path(__file__).parent.parent / "prompts" / "style_guide.md"
-PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "script_v1.md"
+PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "script_v2.md"
 
 
 async def run_script(ctx, plan: CurriculumPlan, ingested: IngestedDocument) -> Script:
