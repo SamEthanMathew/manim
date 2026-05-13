@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { spawnPipeline } from "@/lib/modal/spawn";
 
-const MAX_PAGES = 50;
 const MAX_DURATION = 1800;
 
 export async function POST(req: Request) {

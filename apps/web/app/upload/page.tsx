@@ -3,6 +3,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
+export const dynamic = "force-dynamic";
+
 export default function UploadPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();

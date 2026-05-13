@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+
+export const dynamic = "force-dynamic";
 
 type Settings = {
   preferred_model: "gpt-4o" | "claude-sonnet-4-6" | "claude-opus-4-7";
@@ -11,7 +12,6 @@ type Settings = {
 };
 
 export default function SettingsPage() {
-  const supabase = createSupabaseBrowserClient();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [openaiKey, setOpenaiKey] = useState("");
   const [anthropicKey, setAnthropicKey] = useState("");

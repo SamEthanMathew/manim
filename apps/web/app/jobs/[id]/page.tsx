@@ -3,6 +3,8 @@ import { use, useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import type { Job, JobEvent } from "@manim/shared";
 
+export const dynamic = "force-dynamic";
+
 const STAGES = [
   "ingest",
   "curriculum",
