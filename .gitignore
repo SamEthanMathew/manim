@@ -1,6 +1,7 @@
 # Python
 .venv
 .env
+.env.local
 __pycache__/
 *.pyc
 *.pyo
@@ -8,15 +9,39 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
 
-# Configuration
-config/.env
-.env.local
+# Node / Next.js
+node_modules/
+.next/
+out/
+.pnpm-store/
+*.tsbuildinfo
+.turbo/
+
+# Modal
+.modal/
+
+# Supabase (local)
+supabase/.branches/
+supabase/.temp/
 
 # Generated outputs
 output/
 *_output.md
 demo_output.md
+media/                  # Manim render dir
+*.mp4
+!tests/render_fixtures/**/*.mp4
+*.wav
+!tests/render_fixtures/**/*.wav
+
+# Local corpus clone
+3b1b_videos/
+corpus_raw.json
+corpus_embedded.jsonl
 
 # IDE
 .vscode/
@@ -33,3 +58,10 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Coordination (transient agent state — keep status/* and dashboards committed)
+# (no extra ignores here; coordination/ is tracked)
+
+# Secrets
+.env.*
+!.env.example

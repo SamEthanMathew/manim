@@ -1,0 +1,10 @@
+{
+  "name": "@manim/shared",
+  "version": "0.1.0",
+  "private": true,
+  "main": "schemas.ts",
+  "types": "schemas.ts",
+  "exports": {
+    ".": "./schemas.ts"
+  }
+}

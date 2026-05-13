@@ -1,0 +1,32 @@
+[project]
+name = "manim-monorepo"
+version = "0.1.0"
+description = "PDF -> 3b1b-style Manim video pipeline (workspace root)"
+requires-python = ">=3.12"
+
+[tool.uv.workspace]
+members = ["workers"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["workers", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pyright]
+include = ["workers", "tests"]
+exclude = ["**/__pycache__", "**/.venv", "src"]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+reportMissingImports = "warning"
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "workers/tests"]
+asyncio_mode = "auto"
+addopts = "-ra --strict-markers"

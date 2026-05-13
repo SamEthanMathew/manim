@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0B0E14;
+  --fg: #E5E7EB;
+  --muted: #9CA3AF;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  min-height: 100vh;
+}
