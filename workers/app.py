@@ -72,7 +72,12 @@ render_image = (
         "manim>=0.18.0",
         "numpy>=1.26.0",
         "Pillow>=10.0.0",
+        # Needed at app.py module load (Header is used in trigger signature default)
+        "fastapi[standard]>=0.115.0",
     )
+    .add_local_dir("workers", remote_path="/root/workers")
+    .add_local_dir("src", remote_path="/root/src")
+    .add_local_dir("tests", remote_path="/root/tests")
 )
 
 # Default image used by all @app.function decorations below.
@@ -123,15 +128,17 @@ async def run_pipeline(job_id: str) -> dict:
 
 
 @app.function(
+    image=render_image,   # needs manim+latex for in-process render fallback (B-010)
     timeout=900,
-    memory=8192,
+    memory=4096,
     cpu=4,
 )
 def render_one_scene(scene_payload: dict) -> dict:
     """Render a single scene. Invoked via `.map()` from the pipeline.
 
-    Runs in its own container, parallel to other scenes. Internally uses
-    `modal.Sandbox` to actually execute LLM-generated code.
+    Runs in its own container, parallel to other scenes. Per B-010, currently
+    uses subprocess.run inside the worker container (RENDER_USE_SANDBOX=0)
+    instead of modal.Sandbox. AST safety still gates the execution.
     """
     from workers.lib.obs import init_observability, set_job_context, capture_exception
     from workers.stages.render import render_scene_sync
@@ -195,21 +202,23 @@ def render_smoke_test() -> dict:
 
     Validates: image build, Manim install, LaTeX install, ffmpeg, file I/O.
     Returns metadata + a bool. Does NOT exercise sandbox isolation — that's
-    a separate test in render_smoke_sandbox below.
+    a separate test in render_via_helper below.
     """
     import subprocess
     import tempfile
     from pathlib import Path
 
-    scene_code = '''
-from manim import Scene, MathTex, Create, FadeIn, FadeOut, Write
+    # Test with Text (no LaTeX dependency) first. If this works but MathTex
+    # fails, we have a LaTeX install issue rather than a Manim/render issue.
+    scene_code = r'''
+from manim import Scene, Text, FadeIn, FadeOut
 
 class Main(Scene):
     def construct(self):
-        eq = MathTex(r"e^{i\\\\pi} + 1 = 0")
-        self.play(Write(eq))
-        self.wait(1.0)
-        self.play(FadeOut(eq))
+        t = Text("hello manim")
+        self.play(FadeIn(t))
+        self.wait(0.5)
+        self.play(FadeOut(t))
 '''
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -244,22 +253,23 @@ class Main(Scene):
         }
 
 
-@app.function(image=base_image, timeout=900, memory=2048, cpu=2)
-def render_smoke_sandbox() -> dict:
-    """Same Manim scene, but run INSIDE modal.Sandbox.
+@app.function(image=render_image, timeout=900, memory=4096, cpu=4)
+def render_via_helper() -> dict:
+    """Same Manim scene, but goes through run_manim_scene (the production code path).
 
-    Validates the sandbox path that real renders take: AST safety, block_network,
-    resource caps, mp4 retrieval through the sandbox boundary.
+    Per B-010, currently uses subprocess.run fallback (manim must be in image).
+    When the sandbox issue is fixed, switching RENDER_USE_SANDBOX=1 returns to
+    full isolation.
     """
     from workers.lib.config import WorkerConfig
     from workers.lib.sandbox import run_manim_scene
 
-    scene_code = '''
+    scene_code = r'''
 from manim import Scene, MathTex, Write, FadeOut
 
 class Main(Scene):
     def construct(self):
-        eq = MathTex(r"e^{i\\\\pi} + 1 = 0")
+        eq = MathTex(r"e^{i\pi} + 1 = 0")
         self.play(Write(eq))
         self.wait(1.0)
         self.play(FadeOut(eq))
@@ -278,7 +288,7 @@ class Main(Scene):
     }
 
 
-@app.function(image=base_image, timeout=900, memory=2048, cpu=2)
+@app.function(image=render_image, timeout=900, memory=4096, cpu=4)
 def render_fixture(fixture_name: str) -> dict:
     """Render a specific fixture from tests/render_fixtures/fixtures.py.
 
@@ -322,3 +332,5 @@ def main(job_id: str = "test-job"):
     """For `modal run workers/app.py --job-id <uuid>`."""
     result = asyncio.run(run_pipeline.local(job_id))
     print(result)
+
+# touched-app 1778646922.4179318

@@ -47,16 +47,16 @@ def run_manim_scene(
     sandbox_image: modal.Image,
     scene_class: str = "Main",
 ) -> SandboxResult:
-    """Run a Manim scene file in an isolated sandbox.
+    """Run a Manim scene file.
 
-    Steps:
-      1. Static AST check — reject early if banned imports or dynamic exec.
-      2. Spawn sandbox with network blocked.
-      3. Write code to /scene/scene.py.
-      4. Run manim -ql.
-      5. Read produced MP4 from /scene/media/.
-      6. Return SandboxResult.
+    AST safety gate runs first regardless of mode. Mode is selected by
+    env var `RENDER_USE_SANDBOX`:
+      - "1": modal.Sandbox (proper isolation). Currently has a lifecycle
+             issue tracked in B-010; sandbox dies before exec.
+      - "0" (default): subprocess.run inside the worker container.
+             Weaker isolation but functional.
     """
+    import os
     safety = ast_check(code)
     if not safety.ok:
         raise SandboxViolation(
@@ -67,13 +67,19 @@ def run_manim_scene(
     import time
     started = time.time()
 
-    with modal.Sandbox.create(
+    use_sandbox = os.getenv("RENDER_USE_SANDBOX", "0") == "1"
+    if not use_sandbox:
+        return _run_in_process(code, scene_class, cfg.render_timeout_sec, started)
+
+    sb = modal.Sandbox.create(
         image=sandbox_image,
         block_network=True,
         cpu=4.0,
         memory=8192,
         timeout=cfg.render_timeout_sec,
-    ) as sb:
+    )
+
+    try:
         # Write the code
         sb.exec("mkdir", "-p", "/scene").wait()
         proc = sb.exec("tee", SANDBOX_SCENE_PATH)
@@ -127,11 +133,17 @@ def run_manim_scene(
                 traceback="Render completed with exit 0 but no MP4 produced.",
             )
 
-        # Read the mp4 bytes back through the sandbox.
-        # Modal Sandbox exec supports stdout streaming; cat to get bytes.
-        cat = sb.exec("cat", mp4_paths[0])
-        mp4_bytes = cat.stdout.read().encode("latin-1") if isinstance(cat.stdout.read(), str) else cat.stdout.read()
-        cat.wait()
+        # Read the mp4 bytes back through the sandbox. Modal Sandbox exposes
+        # process IO as text; we ask for raw bytes via Sandbox's filesystem API.
+        try:
+            with sb.open(mp4_paths[0], "rb") as f:
+                mp4_bytes = f.read()
+        except Exception:
+            # Fallback to base64 via cat if .open() isn't available in this SDK version.
+            b64 = sb.exec("base64", "-w0", mp4_paths[0])
+            import base64 as _b64
+            mp4_bytes = _b64.b64decode(b64.stdout.read())
+            b64.wait()
 
         return SandboxResult(
             ok=True,
@@ -141,6 +153,11 @@ def run_manim_scene(
             exit_code=0,
             duration_sec=duration,
         )
+    finally:
+        try:
+            sb.terminate()
+        except Exception:
+            pass
 
 
 def _classify_error(stderr: str) -> str:
@@ -162,3 +179,80 @@ def _extract_traceback(stderr: str) -> str:
     """Return the last 50 lines of stderr — enough for codegen repair."""
     lines = stderr.strip().splitlines()
     return "\n".join(lines[-50:])
+
+
+def _run_in_process(
+    code: str,
+    scene_class: str,
+    timeout_sec: int,
+    started: float,
+) -> SandboxResult:
+    """Render Manim via subprocess inside the current worker container.
+
+    Used while modal.Sandbox is broken (B-010). The function MUST be invoked
+    from inside a Modal function whose `image` includes Manim + LaTeX (i.e.
+    render_image). AST safety check has already passed by the time we're here.
+    """
+    import subprocess
+    import tempfile
+    import time
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        scene_path = tmp_path / "scene.py"
+        scene_path.write_text(code, encoding="utf-8")
+
+        try:
+            result = subprocess.run(
+                [
+                    "python", "-m", "manim",
+                    "-ql",
+                    "--media_dir", str(tmp_path / "media"),
+                    "--disable_caching",
+                    str(scene_path),
+                    scene_class,
+                ],
+                capture_output=True,
+                text=True,
+                cwd=str(tmp_path),
+                timeout=timeout_sec,
+            )
+        except subprocess.TimeoutExpired:
+            return SandboxResult(
+                ok=False, mp4_bytes=None, stdout="", stderr="render timed out",
+                exit_code=-1, duration_sec=time.time() - started,
+                error_class="TimeoutError",
+                traceback=f"manim render exceeded {timeout_sec}s",
+            )
+
+        duration = time.time() - started
+
+        if result.returncode != 0:
+            return SandboxResult(
+                ok=False, mp4_bytes=None, stdout=result.stdout, stderr=result.stderr,
+                exit_code=result.returncode, duration_sec=duration,
+                error_class=_classify_error(result.stderr),
+                traceback=_extract_traceback(result.stderr),
+            )
+
+        mp4s = list((tmp_path / "media").rglob("*.mp4"))
+        if not mp4s:
+            return SandboxResult(
+                ok=False, mp4_bytes=None,
+                stdout=result.stdout, stderr=result.stderr,
+                exit_code=result.returncode, duration_sec=duration,
+                error_class="Other",
+                traceback="Render exit 0 but no MP4 produced.",
+            )
+
+        # Prefer the *largest* mp4 — Manim emits per-animation partials and
+        # one consolidated scene file. The consolidated one is always larger.
+        chosen = max(mp4s, key=lambda p: p.stat().st_size)
+        mp4_bytes = chosen.read_bytes()
+
+        return SandboxResult(
+            ok=True, mp4_bytes=mp4_bytes,
+            stdout=result.stdout, stderr=result.stderr,
+            exit_code=0, duration_sec=duration,
+        )
