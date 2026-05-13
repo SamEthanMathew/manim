@@ -4,12 +4,17 @@
 
 ## Headline result
 
-🟢 **First real PDF → final.mp4 produced end-to-end.**
-- Input: 7-page DiscreteMath_Syllabus.pdf
-- Output: 1.12 MB MP4 (validated header, plays in any standard player)
-- Cost: ~$0.50 in OpenAI tokens (gpt-4o-mini)
-- Wall time: ~6 minutes from upload → done
-- Job id: `b9a83bb3-3f57-4505-a6ca-565577b08752`
+🟢 **End-to-end PDF → final.mp4 working.** Two real-data runs completed.
+
+| Run | Job id | Scenes | Real renders | Fallbacks | Output |
+|---|---|---|---|---|---|
+| 1 | `b9a83bb3...` | 4 | 2 | 2 | 1.12 MB MP4 |
+| 2 | `29e01b0b...` | 5 | **4** | 1 | 1.20 MB MP4 |
+
+- Input: 7-page DiscreteMath_Syllabus.pdf, both runs
+- Codegen success rate: 50% → **80%** between runs (same prompts, different LLM rolls)
+- Wall time: 4-6 minutes from upload → done
+- Cost: ~$0.70 in OpenAI tokens (gpt-4o-mini) across all runs tonight
 
 ## What runs end-to-end now
 
